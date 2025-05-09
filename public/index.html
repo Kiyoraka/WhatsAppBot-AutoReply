@@ -116,7 +116,16 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io();
+      const socket = io();
+      console.log('Attempting to connect to socket...');
+  
+      socket.on('connect', () => {
+        console.log('Socket connected!');
+      });
+  
+      socket.on('connect_error', (error) => {
+        console.error('Socket connection error:', error);
+      });
     
     // Elements
     const qrContainer = document.getElementById('qr-container');
@@ -170,6 +179,8 @@
       keywordResponsesData = data.keywordResponses;
       renderKeywordResponses();
     });
+
+    
     
     // Functions
     function renderKeywordResponses() {

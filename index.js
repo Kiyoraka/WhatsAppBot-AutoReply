@@ -25,9 +25,70 @@ app.get('/', (req, res) => {
 
 // Configure the keywords and responses
 let keywordResponses = [
-  { keyword: 'hello', response: 'Hi there! This is an automated response.' },
-  { keyword: 'help', response: 'How can I help you today? This is an auto-reply bot.' },
-  { keyword: 'info', response: 'This is a demo WhatsApp auto-reply bot.' }
+    {
+        keywords: ['hello', 'hi', 'hey', 'salam', 'selamat'],
+        response: 'Selamat datang ke Portal Rasmi Kerajaan Negeri Perak! Bagaimana saya boleh membantu anda hari ini?'
+    },
+    {
+        keywords: ['perkhidmatan', 'service', 'khidmat', 'bantuan'],
+        response: 'Kerajaan Negeri Perak menawarkan pelbagai perkhidmatan dalam talian seperti pembayaran cukai, semakan status permohonan, aduan awam, dan banyak lagi. Adakah anda ingin maklumat tentang perkhidmatan tertentu?'
+    },
+    {
+        keywords: ['aduan', 'complaint', 'lapor', 'report'],
+        response: 'Untuk membuat aduan kepada Kerajaan Negeri Perak, anda boleh menggunakan sistem e-Aduan kami. Anda perlu mendaftar akaun, kemudian isi borang aduan dengan maklumat terperinci. Aduan anda akan diproses dalam tempoh 3-5 hari bekerja.'
+    },
+    {
+        keywords: ['cukai', 'tax', 'bayar', 'payment'],
+        response: 'Pembayaran cukai tanah dan cukai taksiran boleh dibuat secara dalam talian melalui portal e-Perkhidmatan kami. Anda juga boleh membuat pembayaran di kaunter Pejabat Tanah & Daerah atau Pihak Berkuasa Tempatan yang berkaitan.'
+    },
+    {
+        keywords: ['waktu operasi', 'waktu pejabat', 'office hours', 'operation time'],
+        response: 'Waktu operasi pejabat Kerajaan Negeri Perak adalah:\n\nIsnin - Khamis: 8:00 pagi - 1:00 petang, 2:00 petang - 5:00 petang\nJumaat: 8:00 pagi - 12:15 tengahari, 2:45 petang - 5:00 petang\n\nPejabat ditutup pada hari Sabtu, Ahad dan cuti umum.'
+    },
+    {
+        keywords: ['lokasi', 'alamat', 'address', 'location', 'pejabat'],
+        response: 'Pejabat Setiausaha Kerajaan Negeri Perak terletak di:\n\nBangunan Perak Darul Ridzuan,\nJalan Panglima Bukit Gantang Wahab,\n30000, Ipoh, Perak Darul Ridzuan,\nMalaysia.\n\nNo. Tel: 05-2095000\nNo. Faks: 05-2555026'
+    },
+    {
+        keywords: ['borang', 'form', 'download', 'muat turun'],
+        response: 'Pelbagai borang permohonan boleh dimuat turun dari bahagian e-Perkhidmatan di portal kami. Sila pilih jenis perkhidmatan yang anda perlukan untuk mencari borang yang berkaitan. Borang yang telah dilengkapkan boleh dihantar secara dalam talian atau di kaunter berkaitan.'
+    },
+    {
+        keywords: ['tender', 'sebut harga', 'quotation', 'procurement'],
+        response: 'Maklumat tender dan sebut harga semasa boleh didapati di bahagian "Iklan & Sebut Harga" di portal kami. Dokumen tender boleh dibeli dari Pejabat Kewangan Negeri. Semua permohonan hendaklah diserahkan sebelum tarikh tutup yang dinyatakan.'
+    },
+    {
+        keywords: ['jawatan kosong', 'kerja', 'job', 'vacancy', 'career'],
+        response: 'Jawatan kosong di Kerajaan Negeri Perak akan diiklankan di bahagian "Iklan Jawatan Kosong" di portal kami. Permohonan hendaklah dibuat secara dalam talian melalui sistem SPA (Suruhanjaya Perkhidmatan Awam) atau portal JobsMalaysia.'
+    },
+    {
+        keywords: ['pelancongan', 'tourism', 'lawat', 'visit', 'tempat menarik'],
+        response: 'Negeri Perak mempunyai banyak tempat pelancongan menarik seperti Taman Royal Belum, Gua Tempurung, Kuala Kangsar, dan banyak lagi. Untuk maklumat lanjut tentang destinasi pelancongan di Perak, sila layari bahagian Pelancongan di portal kami.'
+    },
+    {
+        keywords: ['pendidikan', 'education', 'sekolah', 'school', 'universiti'],
+        response: 'Untuk maklumat berkaitan pendidikan di negeri Perak, termasuk senarai sekolah, institusi pengajian tinggi, dan program pendidikan khas, sila layari bahagian Pendidikan di portal kami. Anda juga boleh menghubungi Jabatan Pendidikan Negeri Perak di talian 05-501 5000.'
+    },
+    {
+        keywords: ['sultan', 'raja', 'diraja', 'tuanku', 'royal'],
+        response: 'DYMM Paduka Seri Sultan Perak, Sultan Nazrin Muizzuddin Shah Ibni Almarhum Sultan Azlan Muhibbuddin Shah Al-Maghfur-Lah adalah Sultan Perak yang ke-35. Untuk maklumat lanjut tentang Institusi Diraja Perak, sila layari bahagian Info Perak > Diraja di portal kami.'
+    },
+    {
+        keywords: ['menteri besar', 'mb', 'chief minister'],
+        response: 'YAB Menteri Besar Perak adalah ketua kerajaan negeri. Untuk maklumat lanjut tentang YAB Menteri Besar dan ahli Majlis Mesyuarat Kerajaan Negeri Perak, sila layari bahagian Kerajaan > Pentadbiran Negeri di portal kami.'
+    },
+    {
+        keywords: ['covid', 'koronavirus', 'coronavirus', 'vaksin', 'vaccine'],
+        response: 'Untuk maklumat terkini berkaitan COVID-19 di negeri Perak, termasuk pusat vaksinasi, statistik kes, dan SOP semasa, sila rujuk ke pengumuman rasmi di portal kami atau layari portal COVID-19 Kerajaan Negeri Perak.'
+    },
+    {
+        keywords: ['majlis perbandaran', 'local council', 'mpk', 'mbi', 'mbp'],
+        response: 'Negeri Perak mempunyai beberapa Pihak Berkuasa Tempatan termasuk Majlis Bandaraya Ipoh (MBI), Majlis Perbandaran Taiping (MPT), dan lain-lain. Untuk maklumat lanjut atau untuk menghubungi PBT tertentu, sila layari bahagian Direktori > Pihak Berkuasa Tempatan di portal kami.'
+    },
+    {
+        keywords: ['bantuan', 'subsidi', 'aid', 'assistance', 'welfare'],
+        response: 'Kerajaan Negeri Perak menawarkan pelbagai program bantuan untuk penduduk yang layak. Ini termasuk bantuan kewangan, program perumahan, dan program bantuan pendidikan. Untuk maklumat lanjut atau untuk memohon, sila hubungi Jabatan Kebajikan Masyarakat Negeri Perak.'
+    }
 ];
 
 // Route to update keyword responses
@@ -57,14 +118,21 @@ const client = new Client({
   }
 });
 
-// When QR code is received
+// Add this near the top
+const qrcode_terminal = require('qrcode-terminal');
+
+// Modify the QR event handler to also show the QR in terminal
 client.on('qr', (qr) => {
-  console.log('QR RECEIVED', qr);
+  console.log('QR RECEIVED');
   
   // Generate QR code as image and send to client
   qrcode.toDataURL(qr, (err, url) => {
+    if (err) {
+      console.error('Error generating QR code URL:', err);
+      return;
+    }
+    console.log('QR code URL generated');
     io.emit('qr', { url });
-    console.log('QR Code generated and sent to client');
   });
 });
 
@@ -96,27 +164,32 @@ client.on('disconnected', (reason) => {
 
 // Handle incoming messages
 client.on('message', async (msg) => {
-  const messageText = msg.body.toLowerCase();
-  let replied = false;
-
-  // Check if the message contains any of our keywords
-  for (const item of keywordResponses) {
-    if (messageText.includes(item.keyword.toLowerCase())) {
-      try {
-        await msg.reply(item.response);
-        console.log(`Replied to message with keyword: ${item.keyword}`);
-        replied = true;
-        break; // Stop checking after the first match
-      } catch (error) {
-        console.error('Error sending reply:', error);
+    const messageText = msg.body.toLowerCase();
+    let replied = false;
+  
+    // Check if the message contains any of our keywords
+    for (const item of keywordResponses) {
+      // Look for any matching keywords in the message
+      const hasKeyword = item.keywords.some(keyword => 
+        messageText.includes(keyword.toLowerCase())
+      );
+      
+      if (hasKeyword) {
+        try {
+          await msg.reply(item.response);
+          console.log(`Replied to message with keyword match: ${messageText}`);
+          replied = true;
+          break; // Stop checking after the first match
+        } catch (error) {
+          console.error('Error sending reply:', error);
+        }
       }
     }
-  }
-
-  // Log the incoming message and whether we replied
-  console.log(`Received message: ${messageText} - Replied: ${replied}`);
-  io.emit('message', { from: msg.from, body: msg.body, replied });
-});
+  
+    // Log the incoming message and whether we replied
+    console.log(`Received message: ${messageText} - Replied: ${replied}`);
+    io.emit('message', { from: msg.from, body: msg.body, replied });
+  });
 
 // Socket connection
 io.on('connection', (socket) => {
