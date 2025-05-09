@@ -1,0 +1,260 @@
+<!-- Create a public/index.html file with this content -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Auto-Reply Bot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .qr-container {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .qr-image {
+      max-width: 300px;
+      margin: 0 auto;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+    }
+    .connected {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .disconnected {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    .waiting {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    .keyword-container {
+      margin: 20px 0;
+    }
+    .keyword-item {
+      display: flex;
+      margin-bottom: 10px;
+    }
+    .keyword-item input {
+      flex: 1;
+      padding: 8px;
+      margin-right: 10px;
+    }
+    .logs {
+      height: 200px;
+      overflow-y: auto;
+      background-color: #f8f9fa;
+      padding: 10px;
+      border: 1px solid #dee2e6;
+      border-radius: 5px;
+      margin-top: 20px;
+    }
+    .log-entry {
+      margin-bottom: 5px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0069d9;
+    }
+    .add-keyword-btn {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>WhatsApp Auto-Reply Bot</h1>
+    
+    <div class="status waiting" id="status">
+      Waiting to connect to WhatsApp...
+    </div>
+    
+    <div class="qr-container" id="qr-container">
+      <h2>Scan this QR code with your WhatsApp</h2>
+      <div class="qr-image" id="qr-image"></div>
+    </div>
+    
+    <div class="keyword-container">
+      <h2>Keyword Responses</h2>
+      <p>Set up keywords and the automatic responses for them:</p>
+      
+      <div id="keyword-responses">
+        <!-- Keyword response pairs will be added here -->
+      </div>
+      
+      <button class="add-keyword-btn" id="add-keyword">Add Keyword Response</button>
+      <button id="save-keywords">Save Changes</button>
+    </div>
+    
+    <div class="logs">
+      <h3>Activity Logs</h3>
+      <div id="logs-container"></div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    
+    // Elements
+    const qrContainer = document.getElementById('qr-container');
+    const qrImage = document.getElementById('qr-image');
+    const status = document.getElementById('status');
+    const keywordResponses = document.getElementById('keyword-responses');
+    const addKeywordBtn = document.getElementById('add-keyword');
+    const saveKeywordsBtn = document.getElementById('save-keywords');
+    const logsContainer = document.getElementById('logs-container');
+    
+    // Track keyword responses
+    let keywordResponsesData = [];
+    
+    // Socket events
+    socket.on('qr', (data) => {
+      qrImage.innerHTML = `<img src="${data.url}" alt="QR Code">`;
+      status.innerHTML = 'Please scan the QR code with WhatsApp';
+      status.className = 'status waiting';
+      addLogEntry('QR code generated. Waiting for scan...');
+    });
+    
+    socket.on('ready', (data) => {
+      qrContainer.style.display = 'none';
+      status.innerHTML = 'Connected to WhatsApp! Bot is running.';
+      status.className = 'status connected';
+      addLogEntry('WhatsApp connected successfully!');
+    });
+    
+    socket.on('authenticated', (data) => {
+      addLogEntry('Authentication successful!');
+    });
+    
+    socket.on('auth_failure', (data) => {
+      status.innerHTML = 'Authentication failed. Please try again.';
+      status.className = 'status disconnected';
+      addLogEntry('Authentication failed!');
+    });
+    
+    socket.on('disconnected', (data) => {
+      qrContainer.style.display = 'block';
+      status.innerHTML = 'Disconnected from WhatsApp. Waiting for reconnection...';
+      status.className = 'status disconnected';
+      addLogEntry('Disconnected from WhatsApp.');
+    });
+    
+    socket.on('message', (data) => {
+      addLogEntry(`Received message from ${data.from}: "${data.body}" - ${data.replied ? 'Auto-replied' : 'No auto-reply'}`);
+    });
+    
+    socket.on('config', (data) => {
+      keywordResponsesData = data.keywordResponses;
+      renderKeywordResponses();
+    });
+    
+    // Functions
+    function renderKeywordResponses() {
+      keywordResponses.innerHTML = '';
+      
+      keywordResponsesData.forEach((item, index) => {
+        const keywordItem = document.createElement('div');
+        keywordItem.className = 'keyword-item';
+        keywordItem.innerHTML = `
+          <input type="text" placeholder="Keyword" value="${item.keyword}" data-index="${index}" data-type="keyword">
+          <input type="text" placeholder="Response" value="${item.response}" data-index="${index}" data-type="response">
+          <button class="remove-btn" data-index="${index}">Remove</button>
+        `;
+        keywordResponses.appendChild(keywordItem);
+      });
+      
+      // Add event listeners for remove buttons
+      document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const index = parseInt(e.target.getAttribute('data-index'));
+          keywordResponsesData.splice(index, 1);
+          renderKeywordResponses();
+        });
+      });
+      
+      // Add event listeners for inputs
+      document.querySelectorAll('.keyword-item input').forEach(input => {
+        input.addEventListener('change', (e) => {
+          const index = parseInt(e.target.getAttribute('data-index'));
+          const type = e.target.getAttribute('data-type');
+          keywordResponsesData[index][type] = e.target.value;
+        });
+      });
+    }
+    
+    function addKeywordResponse() {
+      keywordResponsesData.push({ keyword: '', response: '' });
+      renderKeywordResponses();
+    }
+    
+    function saveKeywordResponses() {
+      socket.emit('update-responses', { keywordResponses: keywordResponsesData });
+      
+      // Also send to server via HTTP
+      fetch('/update-responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ keywordResponses: keywordResponsesData })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          addLogEntry('Keyword responses saved successfully');
+        } else {
+          addLogEntry('Failed to save keyword responses');
+        }
+      })
+      .catch(error => {
+        addLogEntry('Error saving keyword responses: ' + error.message);
+      });
+    }
+    
+    function addLogEntry(message) {
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      const time = new Date().toLocaleTimeString();
+      entry.textContent = `[${time}] ${message}`;
+      logsContainer.prepend(entry);
+    }
+    
+    // Event listeners
+    addKeywordBtn.addEventListener('click', addKeywordResponse);
+    saveKeywordsBtn.addEventListener('click', saveKeywordResponses);
+    
+    // Initialize with 3 default keyword responses if none exist
+    if (keywordResponsesData.length === 0) {
+      keywordResponsesData = [
+        { keyword: 'hello', response: 'Hi there! This is an automated response.' },
+        { keyword: 'help', response: 'How can I help you today? This is an auto-reply bot.' },
+        { keyword: 'info', response: 'This is a demo WhatsApp auto-reply bot.' }
+      ];
+      renderKeywordResponses();
+    }
+  </script>
+</body>
+</html>
