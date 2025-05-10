@@ -27,10 +27,6 @@ app.get('/', (req, res) => {
 // Configure the keywords and responses
 let keywordResponses = [
     {
-        keywords: ['hello', 'hi', 'hey', 'salam', 'selamat'],
-        response: 'Selamat datang ke Portal Rasmi Kerajaan Negeri Perak! Bagaimana saya boleh membantu anda hari ini?'
-    },
-    {
         keywords: ['perkhidmatan', 'service', 'khidmat', 'bantuan'],
         response: 'Kerajaan Negeri Perak menawarkan pelbagai perkhidmatan dalam talian seperti pembayaran cukai, semakan status permohonan, aduan awam, dan banyak lagi. Adakah anda ingin maklumat tentang perkhidmatan tertentu?'
     },
