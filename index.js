@@ -7,6 +7,7 @@ const qrcode = require('qrcode');
 const socketIO = require('socket.io');
 const http = require('http');
 const path = require('path');
+const qrcode_terminal = require('qrcode-terminal');
 
 const app = express();
 const server = http.createServer(app);
@@ -91,6 +92,34 @@ let keywordResponses = [
     }
 ];
 
+// Welcome message for new users
+let welcomeMessage = "Selamat datang ke Portal Rasmi Kerajaan Negeri Perak! Saya adalah bot bantuan automatik. Bagaimana saya boleh membantu anda hari ini?";
+
+// Track users who have already been greeted
+let greetedUsers = new Set();
+
+// Clear greeted users list at midnight each day to reset greetings
+function scheduleDailyReset() {
+  const now = new Date();
+  const night = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + 1, // tomorrow
+    0, // midnight
+    0, 
+    0
+  );
+  const timeToMidnight = night.getTime() - now.getTime();
+  
+  setTimeout(() => {
+    console.log('Clearing greeted users list for the day');
+    greetedUsers.clear();
+    scheduleDailyReset(); // Schedule the next day's reset
+  }, timeToMidnight);
+  
+  console.log(`Scheduled greeted users reset in ${Math.floor(timeToMidnight / 1000 / 60)} minutes`);
+}
+
 // Route to update keyword responses
 app.post('/update-responses', (req, res) => {
   if (req.body.keywordResponses) {
@@ -101,9 +130,21 @@ app.post('/update-responses', (req, res) => {
   }
 });
 
+// Route to update welcome message
+app.post('/update-greeting', (req, res) => {
+  if (req.body.welcomeMessage) {
+    welcomeMessage = req.body.welcomeMessage;
+    res.json({ success: true, message: 'Greeting message updated successfully' });
+  } else {
+    res.status(400).json({ success: false, message: 'Invalid data format' });
+  }
+});
+
 // Initialize WhatsApp client
 const client = new Client({
-  authStrategy: new LocalAuth(),
+  authStrategy: new LocalAuth({
+    dataPath: './whatsapp-session' // Specify a persistent directory for Railway
+  }),
   puppeteer: {
     headless: true,
     args: [
@@ -113,17 +154,19 @@ const client = new Client({
       '--disable-accelerated-2d-canvas',
       '--no-first-run',
       '--no-zygote',
-      '--disable-gpu'
+      '--disable-gpu',
+      '--single-process', // Important for Railway deployment
+      '--disable-extensions'
     ]
   }
 });
 
-// Add this near the top
-const qrcode_terminal = require('qrcode-terminal');
-
-// Modify the QR event handler to also show the QR in terminal
+// QR code handler
 client.on('qr', (qr) => {
   console.log('QR RECEIVED');
+  
+  // Display QR in terminal for headless environments
+  qrcode_terminal.generate(qr, { small: true });
   
   // Generate QR code as image and send to client
   qrcode.toDataURL(qr, (err, url) => {
@@ -140,6 +183,9 @@ client.on('qr', (qr) => {
 client.on('ready', () => {
   console.log('Client is ready!');
   io.emit('ready', { message: 'WhatsApp is connected!' });
+  
+  // Schedule the daily reset of greeted users
+  scheduleDailyReset();
 });
 
 // When client is authenticated
@@ -164,37 +210,62 @@ client.on('disconnected', (reason) => {
 
 // Handle incoming messages
 client.on('message', async (msg) => {
-    const messageText = msg.body.toLowerCase();
-    let replied = false;
+  // Get the chat ID from the message
+  const chatId = msg.from;
+  const messageText = msg.body.toLowerCase();
+  let replied = false;
   
-    // Check if the message contains any of our keywords
-    for (const item of keywordResponses) {
-      // Look for any matching keywords in the message
-      const hasKeyword = item.keywords.some(keyword => 
-        messageText.includes(keyword.toLowerCase())
-      );
-      
-      if (hasKeyword) {
-        try {
-          await msg.reply(item.response);
-          console.log(`Replied to message with keyword match: ${messageText}`);
-          replied = true;
-          break; // Stop checking after the first match
-        } catch (error) {
-          console.error('Error sending reply:', error);
-        }
+  // If this is a first message from a user today, send the welcome message
+  if (!greetedUsers.has(chatId)) {
+    try {
+      await client.sendMessage(chatId, welcomeMessage);
+      console.log(`Sent welcome message to new user: ${chatId}`);
+      greetedUsers.add(chatId);
+      replied = true;
+      io.emit('message', { 
+        from: chatId, 
+        body: messageText, 
+        replied: true,
+        autoGreeting: true
+      });
+    } catch (error) {
+      console.error('Error sending welcome message:', error);
+    }
+  }
+
+  // Existing keyword response logic
+  for (const item of keywordResponses) {
+    // Look for any matching keywords in the message
+    const hasKeyword = item.keywords.some(keyword => 
+      messageText.includes(keyword.toLowerCase())
+    );
+    
+    if (hasKeyword) {
+      try {
+        await msg.reply(item.response);
+        console.log(`Replied to message with keyword match: ${messageText}`);
+        replied = true;
+        break; // Stop checking after the first match
+      } catch (error) {
+        console.error('Error sending reply:', error);
       }
     }
-  
-    // Log the incoming message and whether we replied
-    console.log(`Received message: ${messageText} - Replied: ${replied}`);
-    io.emit('message', { from: msg.from, body: msg.body, replied });
-  });
+  }
+
+  // Log the incoming message and whether we replied
+  console.log(`Received message: ${messageText} - Replied: ${replied}`);
+  if (!replied || !greetedUsers.has(chatId)) {
+    io.emit('message', { from: chatId, body: messageText, replied });
+  }
+});
 
 // Socket connection
 io.on('connection', (socket) => {
   console.log('A user connected');
-  socket.emit('config', { keywordResponses });
+  socket.emit('config', { 
+    keywordResponses,
+    welcomeMessage 
+  });
 
   // Listen for manual message send
   socket.on('send-message', async (data) => {
@@ -214,7 +285,21 @@ io.on('connection', (socket) => {
   // Update keyword responses
   socket.on('update-responses', (data) => {
     keywordResponses = data.keywordResponses;
-    io.emit('config', { keywordResponses });
+    io.emit('config', { 
+      keywordResponses,
+      welcomeMessage 
+    });
+  });
+  
+  // Update greeting message
+  socket.on('update-greeting', (data) => {
+    if (data.welcomeMessage) {
+      welcomeMessage = data.welcomeMessage;
+      io.emit('config', { 
+        keywordResponses,
+        welcomeMessage 
+      });
+    }
   });
 });
 
